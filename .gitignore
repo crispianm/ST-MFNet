@@ -5,3 +5,4 @@
 *train_results*
 *eval_results*
 *.pth
+*.png
