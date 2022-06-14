@@ -1,7 +1,6 @@
 import torch.nn as nn
 
 
-
 class MultiInputGridNet(nn.Module):
     def __init__(self, in_chs, out_chs, grid_chs=(32, 64, 96), n_row=3, n_col=6):
         super(MultiInputGridNet, self).__init__()
@@ -9,21 +8,25 @@ class MultiInputGridNet(nn.Module):
         self.n_row = n_row
         self.n_col = n_col
         self.n_chs = grid_chs
-        assert len(grid_chs) == self.n_row, 'should give num channels for each row (scale stream)'
-        assert len(in_chs) == self.n_row, 'should give input channels for each row (scale stream)'
+        assert (
+            len(grid_chs) == self.n_row
+        ), "should give num channels for each row (scale stream)"
+        assert (
+            len(in_chs) == self.n_row
+        ), "should give input channels for each row (scale stream)"
 
         for r, n_ch in enumerate(self.n_chs):
-            setattr(self, f'lateral_{r}_0', LateralBlock(in_chs[r], n_ch))
+            setattr(self, f"lateral_{r}_0", LateralBlock(in_chs[r], n_ch))
             for c in range(1, self.n_col):
-                setattr(self, f'lateral_{r}_{c}', LateralBlock(n_ch, n_ch))
+                setattr(self, f"lateral_{r}_{c}", LateralBlock(n_ch, n_ch))
 
         for r, (in_ch, out_ch) in enumerate(zip(self.n_chs[:-1], self.n_chs[1:])):
             for c in range(int(self.n_col / 2)):
-                setattr(self, f'down_{r}_{c}', DownSamplingBlock(in_ch, out_ch))
+                setattr(self, f"down_{r}_{c}", DownSamplingBlock(in_ch, out_ch))
 
         for r, (in_ch, out_ch) in enumerate(zip(self.n_chs[1:], self.n_chs[:-1])):
             for c in range(int(self.n_col / 2)):
-                setattr(self, f'up_{r}_{c}', UpSamplingBlock(in_ch, out_ch))
+                setattr(self, f"up_{r}_{c}", UpSamplingBlock(in_ch, out_ch))
 
         self.lateral_final = LateralBlock(self.n_chs[0], out_chs)
 
@@ -32,17 +35,19 @@ class MultiInputGridNet(nn.Module):
 
         # extensible, memory-efficient
         cur_col = list(args)
-        for c in range(int(self.n_col/2)):
+        for c in range(int(self.n_col / 2)):
             for r in range(self.n_row):
-                cur_col[r] = getattr(self, f'lateral_{r}_{c}')(cur_col[r])
+                cur_col[r] = getattr(self, f"lateral_{r}_{c}")(cur_col[r])
                 if r != 0:
-                    cur_col[r] += getattr(self, f'down_{r-1}_{c}')(cur_col[r-1])
-        
-        for c in range(int(self.n_col/2), self.n_col):
-            for r in range(self.n_row-1, -1, -1):
-                cur_col[r] = getattr(self, f'lateral_{r}_{c}')(cur_col[r])
-                if r != self.n_row-1:
-                    cur_col[r] += getattr(self, f'up_{r}_{c-int(self.n_col/2)}')(cur_col[r+1])
+                    cur_col[r] += getattr(self, f"down_{r-1}_{c}")(cur_col[r - 1])
+
+        for c in range(int(self.n_col / 2), self.n_col):
+            for r in range(self.n_row - 1, -1, -1):
+                cur_col[r] = getattr(self, f"lateral_{r}_{c}")(cur_col[r])
+                if r != self.n_row - 1:
+                    cur_col[r] += getattr(self, f"up_{r}_{c-int(self.n_col/2)}")(
+                        cur_col[r + 1]
+                    )
 
         return self.lateral_final(cur_col[0])
 
@@ -56,13 +61,12 @@ class MultiInputGridNet(nn.Module):
         #             states[f'{r}{c}'] = getattr(self, f'lateral_{r}_{c}')(states[f'{r}{c-1}'])
         #         if r != 0:
         #             states[f'{r}{c}'] += getattr(self, f'down_{r-1}_{c}')(states[f'{r-1}{c}'])
-        
+
         # for c in range(int(self.n_col/2), self.n_col):
         #     for r in range(self.n_row-1, -1, -1):
         #         states[f'{r}{c}'] = getattr(self, f'lateral_{r}_{c}')(states[f'{r}{c-1}'])
         #         if r != 2:
         #             states[f'{r}{c}'] += getattr(self, f'up{r}_{c-3}')(states[f'{r+1}{c}'])
-
 
         # memory-efficient, non-extensible
         # state_00 = self.lateral_0_0(args[0])
@@ -93,54 +97,63 @@ class MultiInputGridNet(nn.Module):
 
 
 class MIMOGridNet(nn.Module):
-    def __init__(self, in_chs, out_chs, grid_chs=(32, 64, 96), n_row=3, n_col=6, outrow=(0,1,2)):
+    def __init__(
+        self, in_chs, out_chs, grid_chs=(32, 64, 96), n_row=3, n_col=6, outrow=(0, 1, 2)
+    ):
         super(MIMOGridNet, self).__init__()
 
         self.n_row = n_row
         self.n_col = n_col
         self.n_chs = grid_chs
         self.outrow = outrow
-        assert len(grid_chs) == self.n_row, 'should give num channels for each row (scale stream)'
-        assert len(in_chs) == self.n_row, 'should give input channels for each row (scale stream)'
-        assert len(out_chs) == len(self.outrow), 'should give out channels for each output row (scale stream)'
+        assert (
+            len(grid_chs) == self.n_row
+        ), "should give num channels for each row (scale stream)"
+        assert (
+            len(in_chs) == self.n_row
+        ), "should give input channels for each row (scale stream)"
+        assert len(out_chs) == len(
+            self.outrow
+        ), "should give out channels for each output row (scale stream)"
 
         for r, n_ch in enumerate(self.n_chs):
-            setattr(self, f'lateral_{r}_0', LateralBlock(in_chs[r], n_ch))
+            setattr(self, f"lateral_{r}_0", LateralBlock(in_chs[r], n_ch))
             for c in range(1, self.n_col):
-                setattr(self, f'lateral_{r}_{c}', LateralBlock(n_ch, n_ch))
+                setattr(self, f"lateral_{r}_{c}", LateralBlock(n_ch, n_ch))
 
         for r, (in_ch, out_ch) in enumerate(zip(self.n_chs[:-1], self.n_chs[1:])):
             for c in range(int(self.n_col / 2)):
-                setattr(self, f'down_{r}_{c}', DownSamplingBlock(in_ch, out_ch))
+                setattr(self, f"down_{r}_{c}", DownSamplingBlock(in_ch, out_ch))
 
         for r, (in_ch, out_ch) in enumerate(zip(self.n_chs[1:], self.n_chs[:-1])):
             for c in range(int(self.n_col / 2)):
-                setattr(self, f'up_{r}_{c}', UpSamplingBlock(in_ch, out_ch))
+                setattr(self, f"up_{r}_{c}", UpSamplingBlock(in_ch, out_ch))
 
         for i, r in enumerate(outrow):
-            setattr(self, f'lateral_final_{r}', LateralBlock(self.n_chs[r], out_chs[i]))
-
+            setattr(self, f"lateral_final_{r}", LateralBlock(self.n_chs[r], out_chs[i]))
 
     def forward(self, *args):
         assert len(args) == self.n_row
 
         # extensible, memory-efficient
         cur_col = list(args)
-        for c in range(int(self.n_col/2)):
+        for c in range(int(self.n_col / 2)):
             for r in range(self.n_row):
-                cur_col[r] = getattr(self, f'lateral_{r}_{c}')(cur_col[r])
+                cur_col[r] = getattr(self, f"lateral_{r}_{c}")(cur_col[r])
                 if r != 0:
-                    cur_col[r] += getattr(self, f'down_{r-1}_{c}')(cur_col[r-1])
-        
-        for c in range(int(self.n_col/2), self.n_col):
-            for r in range(self.n_row-1, -1, -1):
-                cur_col[r] = getattr(self, f'lateral_{r}_{c}')(cur_col[r])
-                if r != self.n_row-1:
-                    cur_col[r] += getattr(self, f'up_{r}_{c-int(self.n_col/2)}')(cur_col[r+1])
+                    cur_col[r] += getattr(self, f"down_{r-1}_{c}")(cur_col[r - 1])
+
+        for c in range(int(self.n_col / 2), self.n_col):
+            for r in range(self.n_row - 1, -1, -1):
+                cur_col[r] = getattr(self, f"lateral_{r}_{c}")(cur_col[r])
+                if r != self.n_row - 1:
+                    cur_col[r] += getattr(self, f"up_{r}_{c-int(self.n_col/2)}")(
+                        cur_col[r + 1]
+                    )
 
         out = []
         for r in self.outrow:
-            out.append(getattr(self, f'lateral_final_{r}')(cur_col[r]))
+            out.append(getattr(self, f"lateral_final_{r}")(cur_col[r]))
 
         return out
 
@@ -152,40 +165,44 @@ class GeneralGridNet(nn.Module):
         self.n_row = n_row
         self.n_col = n_col
         self.n_chs = grid_chs
-        assert len(grid_chs) == self.n_row, 'should give num channels for each row (scale stream)'
+        assert (
+            len(grid_chs) == self.n_row
+        ), "should give num channels for each row (scale stream)"
 
         for r, n_ch in enumerate(self.n_chs):
             if r == 0:
-                setattr(self, f'lateral_{r}_0', LateralBlock(in_chs, n_ch))
+                setattr(self, f"lateral_{r}_0", LateralBlock(in_chs, n_ch))
             for c in range(1, self.n_col):
-                setattr(self, f'lateral_{r}_{c}', LateralBlock(n_ch, n_ch))
+                setattr(self, f"lateral_{r}_{c}", LateralBlock(n_ch, n_ch))
 
         for r, (in_ch, out_ch) in enumerate(zip(self.n_chs[:-1], self.n_chs[1:])):
             for c in range(int(self.n_col / 2)):
-                setattr(self, f'down_{r}_{c}', DownSamplingBlock(in_ch, out_ch))
+                setattr(self, f"down_{r}_{c}", DownSamplingBlock(in_ch, out_ch))
 
         for r, (in_ch, out_ch) in enumerate(zip(self.n_chs[1:], self.n_chs[:-1])):
             for c in range(int(self.n_col / 2)):
-                setattr(self, f'up_{r}_{c}', UpSamplingBlock(in_ch, out_ch))
+                setattr(self, f"up_{r}_{c}", UpSamplingBlock(in_ch, out_ch))
 
         self.lateral_final = LateralBlock(self.n_chs[0], out_chs)
 
     def forward(self, x):
-        cur_col = [x] + [None]*(self.n_row-1)
-        for c in range(int(self.n_col/2)):
+        cur_col = [x] + [None] * (self.n_row - 1)
+        for c in range(int(self.n_col / 2)):
             for r in range(self.n_row):
                 if cur_col[r] != None:
-                    cur_col[r] = getattr(self, f'lateral_{r}_{c}')(cur_col[r])
+                    cur_col[r] = getattr(self, f"lateral_{r}_{c}")(cur_col[r])
                 else:
-                    cur_col[r] = 0.
+                    cur_col[r] = 0.0
                 if r != 0:
-                    cur_col[r] += getattr(self, f'down_{r-1}_{c}')(cur_col[r-1])
-        
-        for c in range(int(self.n_col/2), self.n_col):
-            for r in range(self.n_row-1, -1, -1):
-                cur_col[r] = getattr(self, f'lateral_{r}_{c}')(cur_col[r])
-                if r != self.n_row-1:
-                    cur_col[r] += getattr(self, f'up_{r}_{c-int(self.n_col/2)}')(cur_col[r+1])
+                    cur_col[r] += getattr(self, f"down_{r-1}_{c}")(cur_col[r - 1])
+
+        for c in range(int(self.n_col / 2), self.n_col):
+            for r in range(self.n_row - 1, -1, -1):
+                cur_col[r] = getattr(self, f"lateral_{r}_{c}")(cur_col[r])
+                if r != self.n_row - 1:
+                    cur_col[r] += getattr(self, f"up_{r}_{c-int(self.n_col/2)}")(
+                        cur_col[r + 1]
+                    )
 
         return self.lateral_final(cur_col[0])
 
@@ -197,21 +214,23 @@ class GridNet(nn.Module):
         self.n_row = 3
         self.n_col = 6
         self.n_chs = grid_chs
-        assert len(grid_chs) == self.n_row, 'should give num channels for each row (scale stream)'
+        assert (
+            len(grid_chs) == self.n_row
+        ), "should give num channels for each row (scale stream)"
 
         self.lateral_init = LateralBlock(in_chs, self.n_chs[0])
 
         for r, n_ch in enumerate(self.n_chs):
             for c in range(self.n_col - 1):
-                setattr(self, f'lateral_{r}_{c}', LateralBlock(n_ch, n_ch))
+                setattr(self, f"lateral_{r}_{c}", LateralBlock(n_ch, n_ch))
 
         for r, (in_ch, out_ch) in enumerate(zip(self.n_chs[:-1], self.n_chs[1:])):
             for c in range(int(self.n_col / 2)):
-                setattr(self, f'down_{r}_{c}', DownSamplingBlock(in_ch, out_ch))
+                setattr(self, f"down_{r}_{c}", DownSamplingBlock(in_ch, out_ch))
 
         for r, (in_ch, out_ch) in enumerate(zip(self.n_chs[1:], self.n_chs[:-1])):
             for c in range(int(self.n_col / 2)):
-                setattr(self, f'up_{r}_{c}', UpSamplingBlock(in_ch, out_ch))
+                setattr(self, f"up_{r}_{c}", UpSamplingBlock(in_ch, out_ch))
 
         self.lateral_final = LateralBlock(self.n_chs[0], out_chs)
 
@@ -242,6 +261,7 @@ class GridNet(nn.Module):
 
         return self.lateral_final(state_05)
 
+
 class LateralBlock(nn.Module):
     def __init__(self, ch_in, ch_out):
         super(LateralBlock, self).__init__()
@@ -249,7 +269,7 @@ class LateralBlock(nn.Module):
             nn.PReLU(),
             nn.Conv2d(ch_in, ch_out, kernel_size=3, padding=1),
             nn.PReLU(),
-            nn.Conv2d(ch_out, ch_out, kernel_size=3, padding=1)
+            nn.Conv2d(ch_out, ch_out, kernel_size=3, padding=1),
         )
         if ch_in != ch_out:
             self.conv = nn.Conv2d(ch_in, ch_out, kernel_size=3, padding=1)
@@ -268,7 +288,7 @@ class DownSamplingBlock(nn.Module):
             nn.PReLU(),
             nn.Conv2d(ch_in, ch_out, kernel_size=3, stride=2, padding=1),
             nn.PReLU(),
-            nn.Conv2d(ch_out, ch_out, kernel_size=3, padding=1)
+            nn.Conv2d(ch_out, ch_out, kernel_size=3, padding=1),
         )
 
     def forward(self, x):
@@ -279,11 +299,11 @@ class UpSamplingBlock(nn.Module):
     def __init__(self, ch_in, ch_out):
         super(UpSamplingBlock, self).__init__()
         self.f = nn.Sequential(
-            nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False),
+            nn.Upsample(scale_factor=2, mode="bilinear", align_corners=False),
             nn.PReLU(),
             nn.Conv2d(ch_in, ch_out, kernel_size=3, padding=1),
             nn.PReLU(),
-            nn.Conv2d(ch_out, ch_out, kernel_size=3, padding=1)
+            nn.Conv2d(ch_out, ch_out, kernel_size=3, padding=1),
         )
 
     def forward(self, x):

@@ -1,1 +1,1 @@
-python train.py --data_dir ./training --out_dir ./train_results --epochs 70 --batch_size 4 --loss 1*Lap --patch_size 256 --lr 0.001 --decay_type plateau --gamma 0.5 --patience 5 --optimizer ADAMax
+python evaluate.py --net STMFNet --data_dir "../data" --checkpoint "./models/stmfnet.pth" --out_dir eval_results --dataset "Snufilm_easy_quintuplet"
