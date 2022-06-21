@@ -44,11 +44,11 @@ pip install sk-video==1.1.10
 The dataset folder names should be lower-case and structured as follows.
 ```
 └──── <data directory>/
-    ├──── ucf101/
-    |   ├──── 0/
-    |   ├──── 1/
+    ├──── bvidvc/quintuplets
+    |   ├──── 00000/
+    |   ├──── 00001/
     |   ├──── ...
-    |   └──── 99/
+    |   └──── 17599/
     ├──── davis90/
     |   ├──── bear/
     |   ├──── bike-packing/
@@ -60,16 +60,16 @@ The dataset folder names should be lower-case and structured as follows.
     |   ├──── test-hard.txt
     |   ├──── test-extreme.txt
     |   └──── data/SNU-FILM/test/...
+    ├──── ucf101/
+    |   ├──── 0/
+    |   ├──── 1/
+    |   ├──── ...
+    |   └──── 99/
     ├──── vfitex/
     |   ├──── beach02_4K_mitch/
     |   ├──── bluewater_4K_pexels/
     |   ├──── ...
     |   └──── waterfall_4K_pexels/
-    ├──── bvidvc/quintuplets
-    |   ├──── 00000/
-    |   ├──── 00001/
-    |   ├──── ...
-    |   └──── 17599/
     └──── vimeo_septuplet/
         ├──── sequences/
         ├──── readme/
