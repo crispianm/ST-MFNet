@@ -28,9 +28,6 @@ parser.add_argument(
 def main():
     args = parser.parse_args()
 
-    print("args: ", args)
-    print("type args: ", type(args))
-
     torch.cuda.set_device(args.gpu_id)
 
     if not os.path.exists(args.out_dir):

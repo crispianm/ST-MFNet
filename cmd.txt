@@ -1,1 +1,0 @@
-python evaluate.py --net STMFNet --data_dir "../data" --checkpoint "./models/stmfnet.pth" --out_dir eval_results --dataset "Snufilm_easy_quintuplet"

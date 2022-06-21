@@ -6,3 +6,6 @@
 *eval_results*
 *.pth
 *.png
+*.txt
+knowledge_distillation.ipynb
+knowledge_distillation.ipynb
