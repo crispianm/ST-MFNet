@@ -3,18 +3,19 @@ import utility
 import torch
 import torch.nn as nn
 
-
 class Distiller:
-    def __init__(self, args, train_loader, valid_loader, model, loss, start_epoch=0):
+    def __init__(self, args, train_loader, valid_loader, student, teacher, loss, distill_optimizer, start_epoch=0):
         self.args = args
         self.train_loader = train_loader
         self.max_step = self.train_loader.__len__()
         self.valid_loader = valid_loader
-        self.model = model
+        self.student = student
+        self.teacher = teacher
         self.loss = loss
+        self.distill_optimizer = distill_optimizer
         self.current_epoch = start_epoch
 
-        self.optimizer = utility.make_optimizer(args, self.model)
+        self.optimizer = utility.make_optimizer(args, self.student)
         self.scheduler = utility.make_scheduler(args, self.optimizer)
 
         self.out_dir = args.out_dir
@@ -31,7 +32,7 @@ class Distiller:
 
     def train(self):
         # Train
-        self.model.train()
+        self.student.train()
         psnr_list = []
         for batch_idx, (frame1, frame3, frame4, frame5, frame7) in enumerate(
             self.train_loader, 1
@@ -44,12 +45,14 @@ class Distiller:
             frame7 = frame7.cuda()
             frame4 = frame4.cuda()
 
-            output = self.model(frame1, frame3, frame5, frame7)
+            output = self.student(frame1, frame3, frame5, frame7)
+            targets = self.teacher(frame1, frame3, frame5, frame7)
 
-            loss = self.loss(output, frame4, [frame3, frame5])
-            print('loss ',batch_idx,': ',loss)
+            loss = self.loss(output, targets, [frame3, frame5])
+            self.distill_optimizer.zero_grad()
+            
             loss.backward()
-            self.optimizer.step()
+            self.distill_optimizer.step()
 
             psnr_list.append(
                 utility.calc_psnr(frame4, output["frame1"]).detach()
@@ -78,7 +81,7 @@ class Distiller:
 
     def validate(self):
         # Validate
-        self.model.eval()
+        self.student.eval()
         psnr_list, ssim_list = [], []
         for frame1, frame3, frame4, frame5, frame7 in self.valid_loader:
             with torch.no_grad():
@@ -88,7 +91,7 @@ class Distiller:
                 frame7 = frame7.cuda()
                 frame4 = frame4.cuda()
 
-                output = self.model(frame1, frame3, frame5, frame7)
+                output = self.student(frame1, frame3, frame5, frame7)
 
             psnr_list.append(utility.calc_psnr(frame4, output))  # (B,)
             ssim_list.append(utility.calc_ssim(frame4, output))  # (B,)
@@ -116,7 +119,7 @@ class Distiller:
 
     def save_checkpoint(self):
         torch.save(
-            {"epoch": self.current_epoch, "state_dict": self.model.state_dict()},
+            {"epoch": self.current_epoch, "state_dict": self.student.state_dict()},
             os.path.join(
                 self.ckpt_dir, "model_epoch" + str(self.current_epoch).zfill(3) + ".pth"
             ),

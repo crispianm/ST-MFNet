@@ -39,13 +39,12 @@ class Loss(nn.modules.loss._Loss):
 
         self.loss_module.to('cuda')
 
-
     def forward(self, output, gt, input_frames):
         losses = []
         for l in self.loss:
             if l['function'] is not None:
                 if l['type'] in ['FI_GAN', 'FI_Cond_GAN', 'STGAN']:
-                    loss = l['function'](output['frame1'], gt, input_frames)     
+                    loss = l['function'](output['frame1'], gt, input_frames)
                 else:
                     loss = l['function'](output['frame1'], gt)
 
@@ -55,7 +54,6 @@ class Loss(nn.modules.loss._Loss):
         loss_sum = sum(losses)
 
         return loss_sum
-
 
 
 class DistillationLoss(nn.modules.loss._Loss):
@@ -95,14 +93,28 @@ class DistillationLoss(nn.modules.loss._Loss):
 
         self.loss_module.to('cuda')
 
-    def forward(self, output, gt, input_frames):
+    def forward(self, student_output, teacher_output, input_frames):
+
+        softmax_optimiser = nn.Softmax(dim=1)
+
+        def my_loss(scores, targets, temperature=5):
+            soft_pred = softmax_optimiser(scores / temperature)
+            soft_targets = softmax_optimiser(targets / temperature)
+            loss = l['function'](soft_pred, soft_targets)
+            return loss
+
         losses = []
         for l in self.loss:
+
             if l['function'] is not None:
-                if l['type'] in ['FI_GAN', 'FI_Cond_GAN', 'STGAN']:
-                    loss = l['function'](output['frame1'], gt, input_frames)     
-                else:
-                    loss = l['function'](output['frame1'], gt)
+
+                loss = my_loss(
+                    student_output['frame1'], teacher_output['frame1'], temperature=10)
+
+                # if l['type'] in ['FI_GAN', 'FI_Cond_GAN', 'STGAN']:
+                #     loss = l['function'](student_output['frame1'], gt, input_frames)
+                # else:
+                #     loss = l['function'](student_output['frame1'], gt)
 
                 effective_loss = l['weight'] * loss
                 losses.append(effective_loss)

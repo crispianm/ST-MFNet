@@ -3,6 +3,7 @@ import utility
 import torch
 
 
+
 class Trainer:
     def __init__(self, args, train_loader, valid_loader, model, loss, start_epoch=0):
         self.args = args
