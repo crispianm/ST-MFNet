@@ -102,15 +102,21 @@ class DistillationLoss(nn.modules.loss._Loss):
         def distillation_loss(student_pred, teacher_pred, distill_loss_fn, temperature=10):
 
             soft_pred = logsoftmax(student_pred / temperature)
-            soft_targets = softmax(teacher_pred / temperature)
-            loss = distill_loss_fn(soft_pred, soft_targets)
+            soft_labels = softmax(teacher_pred / temperature)
+            loss = distill_loss_fn(soft_pred, soft_labels)
 
             return loss
 
+        # use logsoftmax to avoid overflow errors
         logsoftmax = nn.LogSoftmax(dim=1)
         softmax = nn.Softmax(dim=1)
 
+        # pretty sure this is the correct loss function to use
         if self.distill_loss_fn == 'KLDivLoss':
+            distill_loss_fn = nn.KLDivLoss(reduction="batchmean")
+        elif self.distill_loss_fn == 'MSELoss':
+            distill_loss_fn = nn.MSELoss()
+        else:
             distill_loss_fn = nn.KLDivLoss(reduction="batchmean")
 
         losses = []
@@ -118,21 +124,19 @@ class DistillationLoss(nn.modules.loss._Loss):
 
             if l['function'] is not None:
 
-                student_loss = l['function'](gt, student_output['frame1'])
+                # apply softmax with temp = 1 here, according to https://intellabs.github.io/distiller/knowledge_distillation.html
+                # note that some other sources did not do this
+                student_loss = l['function'](
+                    gt, softmax(student_output['frame1']))
+
                 distill_loss = distillation_loss(
                     student_output['frame1'], teacher_output['frame1'],
                     distill_loss_fn, temperature=self.temp)
-
-                # if l['type'] in ['FI_GAN', 'FI_Cond_GAN', 'STGAN']:
-                #     loss = l['function'](student_output['frame1'], gt, input_frames)
-                # else:
-                #     loss = l['function'](student_output['frame1'], gt)
 
                 effective_loss = self.alpha * student_loss + \
                     (1 - self.alpha) * distill_loss
 
                 print('loss: ', effective_loss)
-
                 losses.append(effective_loss)
 
         loss_sum = sum(losses)
