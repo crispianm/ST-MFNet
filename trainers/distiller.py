@@ -3,8 +3,9 @@ import utility
 import torch
 import torch.nn as nn
 
+
 class Distiller:
-    def __init__(self, args, train_loader, valid_loader, student, teacher, loss, distill_optimizer, start_epoch=0):
+    def __init__(self, args, train_loader, valid_loader, student, teacher, loss, start_epoch=0):
         self.args = args
         self.train_loader = train_loader
         self.max_step = self.train_loader.__len__()
@@ -12,7 +13,6 @@ class Distiller:
         self.student = student
         self.teacher = teacher
         self.loss = loss
-        self.distill_optimizer = distill_optimizer
         self.current_epoch = start_epoch
 
         self.optimizer = utility.make_optimizer(args, self.student)
@@ -25,9 +25,11 @@ class Distiller:
         if not os.path.exists(self.ckpt_dir):
             os.makedirs(self.ckpt_dir)
 
-        self.logfile = open(os.path.join(args.out_dir, "log.txt"), "a", buffering=1)
+        self.logfile = open(os.path.join(
+            args.out_dir, "log.txt"), "a", buffering=1)
         self.logfile.write(
-            "\n********STARTING FROM EPOCH {}********\n".format(self.current_epoch)
+            "\n********STARTING FROM EPOCH {}********\n".format(
+                self.current_epoch)
         )
 
     def train(self):
@@ -48,11 +50,10 @@ class Distiller:
             output = self.student(frame1, frame3, frame5, frame7)
             targets = self.teacher(frame1, frame3, frame5, frame7)
 
-            loss = self.loss(output, targets, [frame3, frame5])
-            self.distill_optimizer.zero_grad()
-            
+            loss = self.loss(output, targets, frame4, [frame3, frame5])
+            self.optimizer.zero_grad()
             loss.backward()
-            self.distill_optimizer.step()
+            self.optimizer.step()
 
             psnr_list.append(
                 utility.calc_psnr(frame4, output["frame1"]).detach()
@@ -121,7 +122,8 @@ class Distiller:
         torch.save(
             {"epoch": self.current_epoch, "state_dict": self.student.state_dict()},
             os.path.join(
-                self.ckpt_dir, "model_epoch" + str(self.current_epoch).zfill(3) + ".pth"
+                self.ckpt_dir, "model_epoch" +
+                str(self.current_epoch).zfill(3) + ".pth"
             ),
         )
 

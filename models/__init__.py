@@ -1,1 +1,1 @@
-from .stmfnet import STMFNet
+from .stmfnet import STMFNet, student_STMFNet

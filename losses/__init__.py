@@ -62,6 +62,9 @@ class DistillationLoss(nn.modules.loss._Loss):
 
         self.loss = []
         self.loss_module = nn.ModuleList()
+        self.temp = args.temp
+        self.alpha = args.alpha
+        self.distill_loss_fn = args.distill_loss_fn
 
         for loss in args.loss.split('+'):
             loss_function = None
@@ -93,30 +96,43 @@ class DistillationLoss(nn.modules.loss._Loss):
 
         self.loss_module.to('cuda')
 
-    def forward(self, student_output, teacher_output, input_frames):
+    def forward(self, student_output, teacher_output, gt, input_frames):
 
-        softmax_optimiser = nn.Softmax(dim=1)
+        # distillation loss function
+        def distillation_loss(student_pred, teacher_pred, distill_loss_fn, temperature=10):
 
-        def my_loss(scores, targets, temperature=5):
-            soft_pred = softmax_optimiser(scores / temperature)
-            soft_targets = softmax_optimiser(targets / temperature)
-            loss = l['function'](soft_pred, soft_targets)
+            soft_pred = logsoftmax(student_pred / temperature)
+            soft_targets = softmax(teacher_pred / temperature)
+            loss = distill_loss_fn(soft_pred, soft_targets)
+
             return loss
+
+        logsoftmax = nn.LogSoftmax(dim=1)
+        softmax = nn.Softmax(dim=1)
+
+        if self.distill_loss_fn == 'KLDivLoss':
+            distill_loss_fn = nn.KLDivLoss(reduction="batchmean")
 
         losses = []
         for l in self.loss:
 
             if l['function'] is not None:
 
-                loss = my_loss(
-                    student_output['frame1'], teacher_output['frame1'], temperature=10)
+                student_loss = l['function'](gt, student_output['frame1'])
+                distill_loss = distillation_loss(
+                    student_output['frame1'], teacher_output['frame1'],
+                    distill_loss_fn, temperature=self.temp)
 
                 # if l['type'] in ['FI_GAN', 'FI_Cond_GAN', 'STGAN']:
                 #     loss = l['function'](student_output['frame1'], gt, input_frames)
                 # else:
                 #     loss = l['function'](student_output['frame1'], gt)
 
-                effective_loss = l['weight'] * loss
+                effective_loss = self.alpha * student_loss + \
+                    (1 - self.alpha) * distill_loss
+
+                print('loss: ', effective_loss)
+
                 losses.append(effective_loss)
 
         loss_sum = sum(losses)
