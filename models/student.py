@@ -13,9 +13,9 @@ from models.misc import PWCNet
 from models.misc.pwcnet import backwarp
 
 
-class UNet3d_18(nn.Module):
+class student_UNet3d_18(nn.Module):
     def __init__(self, channels=[32, 64, 96, 128], bn=True):
-        super(UNet3d_18, self).__init__()
+        super(student_UNet3d_18, self).__init__()
         growth = 2  # since concatenating previous outputs
         upmode = "transpose"  # use transposeConv to upsample
 
@@ -113,9 +113,9 @@ class UNet3d_18(nn.Module):
         return out
 
 
-class KernelEstimation(torch.nn.Module):
+class student_KernelEstimation(torch.nn.Module):
     def __init__(self, kernel_size):
-        super(KernelEstimation, self).__init__()
+        super(student_KernelEstimation, self).__init__()
         self.kernel_size = kernel_size
 
         def Subnet_offset(ks):
@@ -301,10 +301,10 @@ class KernelEstimation(torch.nn.Module):
         )
 
 
-class STMFNet(torch.nn.Module):
+class student_STMFNet(torch.nn.Module):
     def __init__(self, args):
 
-        super(STMFNet, self).__init__()
+        super(student_STMFNet, self).__init__()
 
         class Metric(torch.nn.Module):
             def __init__(self):
@@ -327,7 +327,7 @@ class STMFNet(torch.nn.Module):
             args.featc, norm_layer=args.featnorm
         )
 
-        self.get_kernel = KernelEstimation(self.kernel_size)
+        self.get_kernel = student_KernelEstimation(self.kernel_size)
 
         self.modulePad = torch.nn.ReplicationPad2d(
             [self.kernel_pad, self.kernel_pad, self.kernel_pad, self.kernel_pad]
@@ -351,7 +351,7 @@ class STMFNet(torch.nn.Module):
 
         self.metric = Metric()
 
-        self.dyntex_generator = UNet3d_18(bn=args.featnorm)
+        self.dyntex_generator = student_UNet3d_18(bn=args.featnorm)
 
         # freeze weights of PWCNet if not finetuning it
         if not args.finetune_pwc:
