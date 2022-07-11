@@ -324,7 +324,7 @@ class STMFNet(torch.nn.Module):
         self.dilation = args.dilation
 
         self.feature_extractor = getattr(feature, args.featnet)(
-            args.featc, norm_layer=args.featnorm
+            channels=[64, 128, 256, 512], norm_layer=args.featnorm
         )
 
         self.get_kernel = KernelEstimation(self.kernel_size)

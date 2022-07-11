@@ -63,14 +63,16 @@ class ResNextBlock(nn.Module):
                 bias=False,
             )
         self.bn2 = norm_layer(width)
-        self.conv3 = nn.Conv2d(width, cout, kernel_size=1, stride=1, bias=False)
+        self.conv3 = nn.Conv2d(
+            width, cout, kernel_size=1, stride=1, bias=False)
         self.bn3 = norm_layer(cout)
         self.relu = nn.ReLU(inplace=True)
         self.downsample = None
         if stride != 1 or cin != cout:
             if down:
                 self.downsample = nn.Sequential(
-                    nn.Conv2d(cin, cout, kernel_size=1, stride=stride, bias=False),
+                    nn.Conv2d(cin, cout, kernel_size=1,
+                              stride=stride, bias=False),
                     norm_layer(cout),
                 )
             else:

@@ -26,7 +26,8 @@ class Vimeo90k_quintuplet(Dataset):
             contents = f.readlines()
             seq_path = [line.strip() for line in contents if line != "\n"]
 
-        self.seq_path_list = [join(seq_dir, *line.split("/")) for line in seq_path]
+        self.seq_path_list = [join(seq_dir, *line.split("/"))
+                              for line in seq_path]
 
     def __getitem__(self, index):
         rawFrame1 = Image.open(join(self.seq_path_list[index], "im1.png"))
@@ -51,7 +52,8 @@ class Vimeo90k_quintuplet(Dataset):
             )
 
         frame1, frame3, frame4, frame5, frame7 = map(
-            TF.to_tensor, (rawFrame1, rawFrame3, rawFrame4, rawFrame5, rawFrame7)
+            TF.to_tensor, (rawFrame1, rawFrame3,
+                           rawFrame4, rawFrame5, rawFrame7)
         )
 
         return frame1, frame3, frame4, frame5, frame7
@@ -92,7 +94,8 @@ class BVIDVC_quintuplet(Dataset):
             )
 
         frame1, frame3, frame4, frame5, frame7 = map(
-            TF.to_tensor, (rawFrame1, rawFrame3, rawFrame4, rawFrame5, rawFrame7)
+            TF.to_tensor, (rawFrame1, rawFrame3,
+                           rawFrame4, rawFrame5, rawFrame7)
         )
 
         return frame1, frame3, frame4, frame5, frame7
@@ -104,7 +107,8 @@ class BVIDVC_quintuplet(Dataset):
 class Sampler(Dataset):
     def __init__(self, datasets, p_datasets=None, iter=False, samples_per_epoch=1000):
         self.datasets = datasets
-        self.len_datasets = np.array([len(dataset) for dataset in self.datasets])
+        self.len_datasets = np.array([len(dataset)
+                                     for dataset in self.datasets])
         self.p_datasets = p_datasets
         self.iter = iter
 

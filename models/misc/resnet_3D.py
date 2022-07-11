@@ -98,7 +98,8 @@ class BasicBlock(nn.Module):
     expansion = 1
 
     def __init__(self, inplanes, planes, conv_builder, stride=1, downsample=None):
-        midplanes = (inplanes * planes * 3 * 3 * 3) // (inplanes * 3 * 3 + 3 * planes)
+        midplanes = (inplanes * planes * 3 * 3 *
+                     3) // (inplanes * 3 * 3 + 3 * planes)
 
         super(BasicBlock, self).__init__()
         self.conv1 = nn.Sequential(
@@ -109,7 +110,7 @@ class BasicBlock(nn.Module):
         self.conv2 = nn.Sequential(
             conv_builder(planes, planes, midplanes), batchnorm(planes)
         )
-        self.fg = SEGating(planes)  ## Feature Gating, from FLAVR
+        self.fg = SEGating(planes)  # Feature Gating, from FLAVR
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
         self.stride = stride
@@ -134,7 +135,8 @@ class Bottleneck(nn.Module):
     def __init__(self, inplanes, planes, conv_builder, stride=1, downsample=None):
 
         super(Bottleneck, self).__init__()
-        midplanes = (inplanes * planes * 3 * 3 * 3) // (inplanes * 3 * 3 + 3 * planes)
+        midplanes = (inplanes * planes * 3 * 3 *
+                     3) // (inplanes * 3 * 3 + 3 * planes)
 
         # 1x1x1
         self.conv1 = nn.Sequential(
@@ -151,7 +153,8 @@ class Bottleneck(nn.Module):
 
         # 1x1x1
         self.conv3 = nn.Sequential(
-            nn.Conv3d(planes, planes * self.expansion, kernel_size=1, bias=False),
+            nn.Conv3d(planes, planes * self.expansion,
+                      kernel_size=1, bias=False),
             batchnorm(planes * self.expansion),
         )
         self.relu = nn.ReLU(inplace=True)
@@ -279,7 +282,8 @@ class VideoResNet(nn.Module):
         downsample = None
 
         if stride != 1 or self.inplanes != planes * block.expansion:
-            ds_stride = conv_builder.get_downsample_stride(stride, temporal_stride)
+            ds_stride = conv_builder.get_downsample_stride(
+                stride, temporal_stride)
             downsample = nn.Sequential(
                 nn.Conv3d(
                     self.inplanes,
@@ -293,7 +297,8 @@ class VideoResNet(nn.Module):
             stride = ds_stride
 
         layers = []
-        layers.append(block(self.inplanes, planes, conv_builder, stride, downsample))
+        layers.append(block(self.inplanes, planes,
+                      conv_builder, stride, downsample))
 
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
@@ -304,7 +309,8 @@ class VideoResNet(nn.Module):
     def _initialize_weights(self):
         for m in self.modules():
             if isinstance(m, nn.Conv3d):
-                nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
+                nn.init.kaiming_normal_(
+                    m.weight, mode="fan_out", nonlinearity="relu")
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
             elif isinstance(m, nn.BatchNorm3d):
@@ -319,7 +325,8 @@ def _video_resnet(arch, pretrained=False, progress=True, **kwargs):
     model = VideoResNet(**kwargs)
 
     if pretrained:
-        state_dict = load_state_dict_from_url(model_urls[arch], progress=progress)
+        state_dict = load_state_dict_from_url(
+            model_urls[arch], progress=progress)
         model.load_state_dict(state_dict)
     return model
 

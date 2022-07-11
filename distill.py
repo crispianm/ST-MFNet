@@ -32,7 +32,8 @@ parser.add_argument(
 parser.add_argument("--gpu_id", type=int, default=0)
 
 # Directory Setting (load applies to student only)
-parser.add_argument("--data_dir", type=str, help="root dir for all datasets")
+parser.add_argument("--data_dir",
+                    default="D:/stmfnet_data", type=str, help="root dir for all datasets")
 parser.add_argument("--out_dir", type=str, default="distill_results")
 parser.add_argument("--load", type=str, default=None)
 
@@ -75,7 +76,7 @@ parser.add_argument("--weight_decay", type=float,
 
 # Options for feature extractor
 parser.add_argument("--featc", nargs="+", type=int,
-                    default=[64, 128, 256, 512])
+                    default=[32, 64, 96, 128])
 parser.add_argument("--featnet", type=str, default="UMultiScaleResNext")
 parser.add_argument("--featnorm", type=str, default="batch")
 parser.add_argument("--kernel_size", type=int, default=5)
@@ -108,7 +109,7 @@ def main():
         augment_t=False,
     )
 
-    datasets_train = [vimeo90k_train, bvidvc_train]
+    datasets_train = [bvidvc_train]
     train_sampler = Sampler(datasets_train, iter=True)
 
     # data loaders
@@ -127,6 +128,7 @@ def main():
     # student and loss function
     student = getattr(models, args.student)(args).cuda()
     print("******student net: ", args.student, " created******")
+    print('Using alpha=', args.alpha, ' and temperature=', args.temp)
 
     loss = losses.DistillationLoss(args)
 

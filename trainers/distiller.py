@@ -15,7 +15,8 @@ class Distiller:
         self.loss = loss
         self.current_epoch = start_epoch
 
-        self.optimizer = utility.make_optimizer(args, self.student)
+        self.optimizer = utility.make_optimizer(
+            args, self.student, train_loader)
         self.scheduler = utility.make_scheduler(args, self.optimizer)
 
         self.out_dir = args.out_dir
@@ -34,11 +35,13 @@ class Distiller:
 
     def train(self):
         # Train
+        print('training...')
         self.student.train()
         psnr_list = []
         for batch_idx, (frame1, frame3, frame4, frame5, frame7) in enumerate(
             self.train_loader, 1
         ):
+
             self.optimizer.zero_grad()
 
             frame1 = frame1.cuda()
@@ -58,7 +61,8 @@ class Distiller:
             psnr_list.append(
                 utility.calc_psnr(frame4, output["frame1"]).detach()
             )  # (B,)
-            if batch_idx % max((self.max_step // 5), 1) == 0:
+
+            if batch_idx*10 % max((self.max_step // 5), 1) == 0:
                 msg = "{:<13s}{:<14s}{:<6s}{:<16s}{:<12s}{:<20.16f}".format(
                     "Train Epoch: ",
                     "["
@@ -69,7 +73,7 @@ class Distiller:
                     "Step: ",
                     "[" + str(batch_idx) + "/" + str(self.max_step) + "]",
                     "train loss: ",
-                    loss.item(),
+                    loss.item()/len(self.train_loader),
                 )
                 print(msg)
                 self.logfile.write(msg + "\n")
@@ -82,6 +86,7 @@ class Distiller:
 
     def validate(self):
         # Validate
+        print('validating...')
         self.student.eval()
         psnr_list, ssim_list = [], []
         for frame1, frame3, frame4, frame5, frame7 in self.valid_loader:
@@ -119,6 +124,7 @@ class Distiller:
             self.scheduler.step(psnr)
 
     def save_checkpoint(self):
+        print('saving checkpoint...')
         torch.save(
             {"epoch": self.current_epoch, "state_dict": self.student.state_dict()},
             os.path.join(

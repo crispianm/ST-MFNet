@@ -1,5 +1,6 @@
 from .gridnet import MIMOGridNet
 from .pwcnet import Network as PWCNet
+from .student_pwcnet import Network as student_PWCNet
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

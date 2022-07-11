@@ -136,7 +136,6 @@ class DistillationLoss(nn.modules.loss._Loss):
                 effective_loss = self.alpha * student_loss + \
                     (1 - self.alpha) * distill_loss
 
-                print('loss: ', effective_loss)
                 losses.append(effective_loss)
 
         loss_sum = sum(losses)

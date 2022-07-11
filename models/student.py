@@ -9,12 +9,12 @@ from torch.nn import functional as F
 from utility import moduleNormalize, gaussian_kernel
 from models import feature
 from models.misc import MIMOGridNet, Upsampler_8tap
-from models.misc import PWCNet
-from models.misc.pwcnet import backwarp
+# from models.misc import student_PWCNet
+# from models.misc.student_pwcnet import backwarp
 
 
 class student_UNet3d_18(nn.Module):
-    def __init__(self, channels=[32, 64, 96, 128], bn=True):
+    def __init__(self, channels=[32, 46, 64, 75], bn=True):
         super(student_UNet3d_18, self).__init__()
         growth = 2  # since concatenating previous outputs
         upmode = "transpose"  # use transposeConv to upsample
@@ -71,19 +71,19 @@ class student_UNet3d_18(nn.Module):
                 [
                     nn.Conv2d(
                         channels[::-1][3] * 5,
-                        channels[::-1][3],
+                        8,
                         kernel_size=1,
                         stride=1,
                         bias=False,
                     )
                 ]
-                + [nn.BatchNorm2d(channels[::-1][3]) if bn else Identity]
+                + [nn.BatchNorm2d(8) if bn else Identity]
             )
         )
 
         self.outconv = nn.Sequential(
             nn.ReflectionPad2d(3),
-            nn.Conv2d(channels[::-1][3], 3,
+            nn.Conv2d(8, 3,
                       kernel_size=7, stride=1, padding=0),
         )
 
@@ -114,22 +114,22 @@ class student_UNet3d_18(nn.Module):
 
 
 class student_KernelEstimation(torch.nn.Module):
-    def __init__(self, kernel_size):
+    def __init__(self, kernel_size, args):
         super(student_KernelEstimation, self).__init__()
         self.kernel_size = kernel_size
 
         def Subnet_offset(ks):
             return torch.nn.Sequential(
                 torch.nn.Conv2d(
-                    in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1
+                    in_channels=args.featc[0], out_channels=45, kernel_size=3, stride=1, padding=1
                 ),
                 torch.nn.ReLU(inplace=False),
                 torch.nn.Conv2d(
-                    in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1
+                    in_channels=45, out_channels=45, kernel_size=3, stride=1, padding=1
                 ),
                 torch.nn.ReLU(inplace=False),
                 torch.nn.Conv2d(
-                    in_channels=64, out_channels=ks, kernel_size=3, stride=1, padding=1
+                    in_channels=45, out_channels=ks, kernel_size=3, stride=1, padding=1
                 ),
                 torch.nn.ReLU(inplace=False),
                 torch.nn.Upsample(
@@ -142,15 +142,15 @@ class student_KernelEstimation(torch.nn.Module):
         def Subnet_weight(ks):
             return torch.nn.Sequential(
                 torch.nn.Conv2d(
-                    in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1
+                    in_channels=args.featc[0], out_channels=45, kernel_size=3, stride=1, padding=1
                 ),
                 torch.nn.ReLU(inplace=False),
                 torch.nn.Conv2d(
-                    in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1
+                    in_channels=45, out_channels=45, kernel_size=3, stride=1, padding=1
                 ),
                 torch.nn.ReLU(inplace=False),
                 torch.nn.Conv2d(
-                    in_channels=64, out_channels=ks, kernel_size=3, stride=1, padding=1
+                    in_channels=45, out_channels=ks, kernel_size=3, stride=1, padding=1
                 ),
                 torch.nn.ReLU(inplace=False),
                 torch.nn.Upsample(
@@ -164,30 +164,30 @@ class student_KernelEstimation(torch.nn.Module):
         def Subnet_offset_ds(ks):
             return torch.nn.Sequential(
                 torch.nn.Conv2d(
-                    in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1
+                    in_channels=args.featc[0], out_channels=45, kernel_size=3, stride=1, padding=1
                 ),
                 torch.nn.ReLU(inplace=False),
                 torch.nn.Conv2d(
-                    in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1
+                    in_channels=45, out_channels=45, kernel_size=3, stride=1, padding=1
                 ),
                 torch.nn.ReLU(inplace=False),
                 torch.nn.Conv2d(
-                    in_channels=64, out_channels=ks, kernel_size=3, stride=1, padding=1
+                    in_channels=45, out_channels=ks, kernel_size=3, stride=1, padding=1
                 ),
             )
 
         def Subnet_weight_ds(ks):
             return torch.nn.Sequential(
                 torch.nn.Conv2d(
-                    in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1
+                    in_channels=args.featc[0], out_channels=45, kernel_size=3, stride=1, padding=1
                 ),
                 torch.nn.ReLU(inplace=False),
                 torch.nn.Conv2d(
-                    in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1
+                    in_channels=45, out_channels=45, kernel_size=3, stride=1, padding=1
                 ),
                 torch.nn.ReLU(inplace=False),
                 torch.nn.Conv2d(
-                    in_channels=64, out_channels=ks, kernel_size=3, stride=1, padding=1
+                    in_channels=45, out_channels=ks, kernel_size=3, stride=1, padding=1
                 ),
                 torch.nn.Softmax(dim=1),
             )
@@ -195,15 +195,15 @@ class student_KernelEstimation(torch.nn.Module):
         def Subnet_offset_us(ks):
             return torch.nn.Sequential(
                 torch.nn.Conv2d(
-                    in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1
+                    in_channels=args.featc[0], out_channels=45, kernel_size=3, stride=1, padding=1
                 ),
                 torch.nn.ReLU(inplace=False),
                 torch.nn.Conv2d(
-                    in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1
+                    in_channels=45, out_channels=45, kernel_size=3, stride=1, padding=1
                 ),
                 torch.nn.ReLU(inplace=False),
                 torch.nn.Conv2d(
-                    in_channels=64, out_channels=ks, kernel_size=3, stride=1, padding=1
+                    in_channels=45, out_channels=ks, kernel_size=3, stride=1, padding=1
                 ),
                 torch.nn.ReLU(inplace=False),
                 torch.nn.Upsample(
@@ -216,15 +216,15 @@ class student_KernelEstimation(torch.nn.Module):
         def Subnet_weight_us(ks):
             return torch.nn.Sequential(
                 torch.nn.Conv2d(
-                    in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1
+                    in_channels=args.featc[0], out_channels=45, kernel_size=3, stride=1, padding=1
                 ),
                 torch.nn.ReLU(inplace=False),
                 torch.nn.Conv2d(
-                    in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1
+                    in_channels=45, out_channels=45, kernel_size=3, stride=1, padding=1
                 ),
                 torch.nn.ReLU(inplace=False),
                 torch.nn.Conv2d(
-                    in_channels=64, out_channels=ks, kernel_size=3, stride=1, padding=1
+                    in_channels=45, out_channels=ks, kernel_size=3, stride=1, padding=1
                 ),
                 torch.nn.ReLU(inplace=False),
                 torch.nn.Upsample(
@@ -306,17 +306,17 @@ class student_STMFNet(torch.nn.Module):
 
         super(student_STMFNet, self).__init__()
 
-        class Metric(torch.nn.Module):
-            def __init__(self):
-                super(Metric, self).__init__()
-                self.paramScale = torch.nn.Parameter(-torch.ones(1, 1, 1, 1))
+        # class Metric(torch.nn.Module):
+        #     def __init__(self):
+        #         super(Metric, self).__init__()
+        #         self.paramScale = torch.nn.Parameter(-torch.ones(1, 1, 1, 1))
 
-            def forward(self, tenFirst, tenSecond, tenFlow):
-                return self.paramScale * F.l1_loss(
-                    input=tenFirst,
-                    target=backwarp(tenSecond, tenFlow),
-                    reduction="none",
-                ).mean(1, True)
+        #     def forward(self, tenFirst, tenSecond, tenFlow):
+        #         return self.paramScale * F.l1_loss(
+        #             input=tenFirst,
+        #             target=backwarp(tenSecond, tenFlow),
+        #             reduction="none",
+        #         ).mean(1, True)
 
         self.args = args
         self.kernel_size = args.kernel_size
@@ -324,10 +324,10 @@ class student_STMFNet(torch.nn.Module):
         self.dilation = args.dilation
 
         self.feature_extractor = getattr(feature, args.featnet)(
-            args.featc, norm_layer=args.featnorm
+            channels=args.featc, norm_layer=args.featnorm
         )
 
-        self.get_kernel = student_KernelEstimation(self.kernel_size)
+        self.get_kernel = student_KernelEstimation(self.kernel_size, args)
 
         self.modulePad = torch.nn.ReplicationPad2d(
             [self.kernel_pad, self.kernel_pad, self.kernel_pad, self.kernel_pad]
@@ -342,21 +342,21 @@ class student_STMFNet(torch.nn.Module):
         self.upsampler = Upsampler_8tap()
 
         self.scale_synthesis = MIMOGridNet(
-            (6, 6 + 6, 6), (3,), grid_chs=(32, 64, 96), n_row=3, n_col=4, outrow=(1,)
+            (6, 6, 6), (3,), grid_chs=(32, 64, 96), n_row=3, n_col=4, outrow=(1,)
         )
 
-        self.flow_estimator = PWCNet()
+        # self.flow_estimator = student_PWCNet()
 
         self.softsplat = ModuleSoftsplat(strType="softmax")
 
-        self.metric = Metric()
+        # self.metric = Metric()
 
         self.dyntex_generator = student_UNet3d_18(bn=args.featnorm)
 
         # freeze weights of PWCNet if not finetuning it
-        if not args.finetune_pwc:
-            for param in self.flow_estimator.parameters():
-                param.requires_grad = False
+        # if not args.finetune_pwc:
+        #     for param in self.flow_estimator.parameters():
+        #         param.requires_grad = False
 
     def forward(self, I0, I1, I2, I3, *args):
         h0 = int(list(I1.size())[2])
@@ -453,29 +453,32 @@ class student_STMFNet(torch.nn.Module):
             * 1.0
         )
 
-        # use softsplat for refinement
-        pyramid0, pyramid2 = self.flow_estimator.extract_pyramid(I1, I2)
-        flow_0_2 = 20 * self.flow_estimator(I1, I2, pyramid0, pyramid2)
-        flow_0_2 = F.interpolate(
-            flow_0_2, size=(h, w), mode="bilinear", align_corners=False
-        )
-        flow_2_0 = 20 * self.flow_estimator(I2, I1, pyramid2, pyramid0)
-        flow_2_0 = F.interpolate(
-            flow_2_0, size=(h, w), mode="bilinear", align_corners=False
-        )
-        metric_0_2 = self.metric(I1, I2, flow_0_2)
-        metric_2_0 = self.metric(I2, I1, flow_2_0)
-        tensorSoftsplat0 = self.softsplat(I1, 0.5 * flow_0_2, metric_0_2)
-        tensorSoftsplat2 = self.softsplat(I2, 0.5 * flow_2_0, metric_2_0)
+        # # use softsplat for refinement
+        # pyramid0, pyramid2 = self.flow_estimator.extract_pyramid(I1, I2)
+        # flow_0_2 = 20 * self.flow_estimator(I1, I2, pyramid0, pyramid2)
+        # flow_0_2 = F.interpolate(
+        #     flow_0_2, size=(h, w), mode="bilinear", align_corners=False
+        # )
+        # flow_2_0 = 20 * self.flow_estimator(I2, I1, pyramid2, pyramid0)
+        # flow_2_0 = F.interpolate(
+        #     flow_2_0, size=(h, w), mode="bilinear", align_corners=False
+        # )
+        # metric_0_2 = self.metric(I1, I2, flow_0_2)
+        # metric_2_0 = self.metric(I2, I1, flow_2_0)
+        # tensorSoftsplat0 = self.softsplat(I1, 0.5 * flow_0_2, metric_0_2)
+        # tensorSoftsplat2 = self.softsplat(I2, 0.5 * flow_2_0, metric_2_0)
 
         # synthesize multiple scales
         tensorCombine_us = torch.cat(
-            [tensorAdaCoF1_us, tensorAdaCoF2_us], dim=1)
+            [tensorAdaCoF1_us, tensorAdaCoF2_us], dim=1
+        )
         tensorCombine = torch.cat(
-            [tensorAdaCoF1, tensorAdaCoF2, tensorSoftsplat0, tensorSoftsplat2], dim=1
+            [tensorAdaCoF1, tensorAdaCoF2], dim=1
         )
         tensorCombine_ds = torch.cat(
-            [tensorAdaCoF1_ds, tensorAdaCoF2_ds], dim=1)
+            [tensorAdaCoF1_ds, tensorAdaCoF2_ds], dim=1
+        )
+
         output_tilde = self.scale_synthesis(
             tensorCombine_us, tensorCombine, tensorCombine_ds
         )[0]
