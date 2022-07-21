@@ -62,7 +62,7 @@ class Distiller:
                 utility.calc_psnr(frame4, output["frame1"]).detach()
             )  # (B,)
 
-            if batch_idx*10 % max((self.max_step // 5), 1) == 0:
+            if batch_idx % max((self.max_step // 10), 1) == 0:
                 msg = "{:<13s}{:<14s}{:<6s}{:<16s}{:<12s}{:<20.16f}".format(
                     "Train Epoch: ",
                     "["
@@ -73,7 +73,7 @@ class Distiller:
                     "Step: ",
                     "[" + str(batch_idx) + "/" + str(self.max_step) + "]",
                     "train loss: ",
-                    loss.item()/len(self.train_loader),
+                    loss.item(),
                 )
                 print(msg)
                 self.logfile.write(msg + "\n")

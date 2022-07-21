@@ -27,7 +27,7 @@ parser.add_argument("--load", type=str, default=None)
 parser.add_argument("--epochs", type=int, default=20, help="Max Epochs")
 parser.add_argument("--batch_size", type=int, default=2, help="Batch size")
 parser.add_argument(
-    "--loss", type=str, default="1*Charb", help="loss function configuration"
+    "--loss", type=str, default="1*Lap", help="loss function configuration"
 )
 parser.add_argument("--patch_size", type=int, default=256, help="crop size")
 
@@ -62,7 +62,7 @@ parser.add_argument("--weight_decay", type=float,
 
 # Options for feature extractor
 parser.add_argument("--featc", nargs="+", type=int,
-                    default=[64, 128, 256, 512])
+                    default=[32, 64, 96, 128])
 parser.add_argument("--featnet", type=str, default="UMultiScaleResNext")
 parser.add_argument("--featnorm", type=str, default="batch")
 parser.add_argument("--kernel_size", type=int, default=5)
@@ -116,7 +116,7 @@ def main():
     if args.load is not None:
         checkpoint = torch.load(args.load)
         model.load_state_dict(checkpoint["state_dict"])
-        # start_epoch = checkpoint["epoch"]
+        start_epoch = checkpoint["epoch"]
 
     my_trainer = Trainer(args, train_loader, valid_loader,
                          model, loss, start_epoch)

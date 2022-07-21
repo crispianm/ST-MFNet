@@ -22,7 +22,10 @@ parser.add_argument("--teacher_dir", type=str, default="./models/stmfnet.pth")
 
 # distillation loss function
 parser.add_argument(
-    "--distill_loss_fn", type=str, default="KLDivLoss", help="Loss function of difference between soft student predictions and soft teacher predictions"
+    "--distill_loss_fn", type=str, default="1*Lap", help="Loss function of difference between soft student predictions and soft teacher predictions"
+)
+parser.add_argument(
+    "--student_loss_fn", type=str, default="1*Lap", help="distillation loss function configuration"
 )
 parser.add_argument(
     "--alpha", type=float, default=0.1, help="weight to student loss function (loss) and 1-alpha to distill_loss_fn"
@@ -40,9 +43,6 @@ parser.add_argument("--load", type=str, default=None)
 # Learning Options
 parser.add_argument("--epochs", type=int, default=70, help="Max Epochs")
 parser.add_argument("--batch_size", type=int, default=2, help="Batch size")
-parser.add_argument(
-    "--loss", type=str, default="1*Lap", help="loss function configuration"
-)
 parser.add_argument("--patch_size", type=int, default=256, help="crop size")
 
 # Optimization specifications
@@ -82,7 +82,7 @@ parser.add_argument("--featnorm", type=str, default="batch")
 parser.add_argument("--kernel_size", type=int, default=5)
 parser.add_argument("--dilation", type=int, default=1)
 parser.add_argument(
-    "--finetune_pwc", dest="finetune_pwc", default=False, action="store_true"
+    "--finetune_pwc", dest="finetune_pwc", default=True, action="store_true"
 )
 
 
@@ -128,7 +128,9 @@ def main():
     # student and loss function
     student = getattr(models, args.student)(args).cuda()
     print("******student net: ", args.student, " created******")
-    print('Using alpha=', args.alpha, ' and temperature=', args.temp)
+    print('Using alpha =', args.alpha, ' and temperature =', args.temp)
+    # print('Using distillation loss function: ', args.distill_loss_fn)
+    # print('Using student loss function: ', args.student_loss_fn)
 
     loss = losses.DistillationLoss(args)
 

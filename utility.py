@@ -34,7 +34,6 @@ def make_optimizer(args, my_model, train_loader):
         }
     kwargs["lr"] = args.lr
     kwargs["weight_decay"] = args.weight_decay
-    print("\nArgs:", kwargs, "\n")
 
     return optimizer_function(trainable, **kwargs)
 

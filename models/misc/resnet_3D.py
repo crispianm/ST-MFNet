@@ -194,6 +194,23 @@ class BasicStem(nn.Sequential):
             nn.ReLU(inplace=True),
         )
 
+class StudentStem(nn.Sequential):
+    """The default conv-batchnorm-relu stem"""
+
+    def __init__(self, outplanes=16):
+        super(StudentStem, self).__init__(
+            nn.Conv3d(
+                3,
+                outplanes,
+                kernel_size=(3, 7, 7),
+                stride=(1, 2, 2),
+                padding=(1, 3, 3),
+                bias=False,
+            ),
+            batchnorm(outplanes),
+            nn.ReLU(inplace=True),
+        )
+
 
 class R2Plus1dStem(nn.Sequential):
     """R(2+1)D stem is different than the default one as it uses separated 3D convolution"""
@@ -231,7 +248,7 @@ class VideoResNet(nn.Module):
         layers,
         stem,
         zero_init_residual=False,
-        channels=[32, 64, 96, 128],
+        channels=[16, 24, 32, 40],
     ):
         """Generic resnet video generator.
 
@@ -360,6 +377,34 @@ def r3d_18(bn=False, pretrained=False, progress=True, **kwargs):
         **kwargs
     )
 
+def student_r3d_18(bn=False, pretrained=False, progress=True, **kwargs):
+    """Construct 18 layer Resnet3D model as in
+    https://arxiv.org/abs/1711.11248
+
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on Kinetics-400
+        progress (bool): If True, displays a progress bar of the download to stderr
+
+    Returns:
+        nn.Module: R3D-18 network
+    """
+
+    global batchnorm
+    if bn:
+        batchnorm = nn.BatchNorm3d
+    else:
+        batchnorm = identity
+
+    return _video_resnet(
+        "r3d_18",
+        pretrained,
+        progress,
+        block=BasicBlock,
+        conv_makers=[Conv3DSimple] * 4,
+        layers=[2, 2, 2, 2],
+        stem=StudentStem,
+        **kwargs
+    )
 
 def mc3_18(bn=False, pretrained=False, progress=True, **kwargs):
     """Constructor for 18 layer Mixed Convolution network as in
