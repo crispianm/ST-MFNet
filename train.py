@@ -18,13 +18,14 @@ parser.add_argument("--net", type=str, default="STMFNet")
 parser.add_argument("--gpu_id", type=int, default=0)
 
 # Directory Setting
-parser.add_argument("--data_dir", type=str,
-                    default="D:/stmfnet_data", help="root dir for all datasets")
+parser.add_argument(
+    "--data_dir", type=str, default="D:/stmfnet_data", help="root dir for all datasets"
+)
 parser.add_argument("--out_dir", type=str, default="./train_results")
 parser.add_argument("--load", type=str, default=None)
 
 # Learning Options
-parser.add_argument("--epochs", type=int, default=20, help="Max Epochs")
+parser.add_argument("--epochs", type=int, default=70, help="Max Epochs")
 parser.add_argument("--batch_size", type=int, default=2, help="Batch size")
 parser.add_argument(
     "--loss", type=str, default="1*Lap", help="loss function configuration"
@@ -57,12 +58,10 @@ parser.add_argument(
     choices=("SGD", "ADAM", "RMSprop", "ADAMax", "OBProxSG"),
     help="optimizer to use (SGD | ADAM | RMSprop | ADAMax | OBProxSG)",
 )
-parser.add_argument("--weight_decay", type=float,
-                    default=0, help="weight decay")
+parser.add_argument("--weight_decay", type=float, default=0, help="weight decay")
 
 # Options for feature extractor
-parser.add_argument("--featc", nargs="+", type=int,
-                    default=[32, 64, 96, 128])
+parser.add_argument("--featc", nargs="+", type=int, default=[32, 64, 96, 128])
 parser.add_argument("--featnet", type=str, default="UMultiScaleResNext")
 parser.add_argument("--featnorm", type=str, default="batch")
 parser.add_argument("--kernel_size", type=int, default=5)
@@ -118,8 +117,7 @@ def main():
         model.load_state_dict(checkpoint["state_dict"])
         start_epoch = checkpoint["epoch"]
 
-    my_trainer = Trainer(args, train_loader, valid_loader,
-                         model, loss, start_epoch)
+    my_trainer = Trainer(args, train_loader, valid_loader, model, loss, start_epoch)
 
     now = datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
     with open(join(args.out_dir, "config.txt"), "a") as f:

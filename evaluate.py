@@ -8,15 +8,14 @@ parser = argparse.ArgumentParser(description="Frame Interpolation Evaluation")
 
 parser.add_argument("--gpu_id", type=int, default=0)
 parser.add_argument("--net", type=str, default="STMFNet")
-parser.add_argument("--dataset", type=str, default="Ucf101_quintuplet")
+parser.add_argument("--dataset", type=str, default="Davis90_quintuplet")
 parser.add_argument("--metrics", nargs="+", type=str, default=["PSNR", "SSIM"])
-parser.add_argument("--checkpoint", type=str, default="ckpt.pth")
-parser.add_argument("--data_dir", type=str, default="D:\\")
-parser.add_argument("--out_dir", type=str, default="eval_results")
+parser.add_argument("--checkpoint", type=str, default="./models/stmfnet.pth")
+parser.add_argument("--data_dir", type=str, default="D:\\stmfnet_data")
+parser.add_argument("--out_dir", type=str, default="tests")
 
 # model parameters
-parser.add_argument("--featc", nargs="+", type=int,
-                    default=[64, 128, 256, 512])
+parser.add_argument("--featc", nargs="+", type=int, default=[32, 64, 96, 128])
 parser.add_argument("--featnet", type=str, default="UMultiScaleResNext")
 parser.add_argument("--featnorm", type=str, default="batch")
 parser.add_argument("--kernel_size", type=int, default=5)
@@ -47,8 +46,7 @@ def main():
         db_folder = args.dataset.split("_")[0].lower()
     else:
         db_folder = args.dataset.lower()
-    test_db = getattr(testsets, args.dataset)(
-        os.path.join(args.data_dir, db_folder))
+    test_db = getattr(testsets, args.dataset)(os.path.join(args.data_dir, db_folder))
     if not os.path.exists(test_dir):
         os.mkdir(test_dir)
     test_db.eval(model, metrics=args.metrics, output_dir=test_dir)

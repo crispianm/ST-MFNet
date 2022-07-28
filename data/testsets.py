@@ -7,6 +7,7 @@ import os
 from os.path import join, exists
 import utility
 import numpy as np
+import time
 
 
 class VFITex_triplet:
@@ -275,6 +276,8 @@ class Davis90_quintuplet:
     def eval(self, model, metrics=["PSNR", "SSIM"], output_dir=None, output_name=None):
         model.eval()
         results_dict = {k: [] for k in metrics}
+        results_dict["Times"] = []
+        results_dict["Frames"] = []
 
         logfile = open(join(output_dir, "results.txt"), "w")
 
@@ -287,6 +290,9 @@ class Davis90_quintuplet:
             gt_list, out_list, inputs_list = [], [], []
             tmp_dict = {k: [] for k in metrics}
             num_frames = len(os.listdir(seqpath))
+
+            i = 0
+            t1_start = time.time()  # start time
             for t in range(0, num_frames - 6, 2):
                 im1 = Image.open(join(seqpath, str(t).zfill(5) + ".jpg"))
                 im3 = Image.open(join(seqpath, str(t + 2).zfill(5) + ".jpg"))
@@ -302,26 +308,32 @@ class Davis90_quintuplet:
 
                 with torch.no_grad():
                     out = model(im1, im3, im5, im7)
+                    i += 1
+            t1_stop = time.time()  # end time
 
-                # abandoning boundary frames here
-                gt_list.append(utility.tensor2rgb(im4))
-                out_list.append(utility.tensor2rgb(out))
-                if t == 0:
-                    inputs_list.append(utility.tensor2rgb(im3))
-                inputs_list.append(utility.tensor2rgb(im5))
+            elapsed_time = t1_stop - t1_start
+            results_dict["Times"].append(elapsed_time)
+            results_dict["Frames"].append(i)
 
-                for metric in metrics:
-                    if metric in ["PSNR", "SSIM"]:
-                        score = getattr(utility, "calc_{}".format(metric.lower()))(
-                            im4, out
-                        )[0].item()
-                        tmp_dict[metric].append(score)
+            # abandoning boundary frames here
+            gt_list.append(utility.tensor2rgb(im4))
+            out_list.append(utility.tensor2rgb(out))
+            if t == 0:
+                inputs_list.append(utility.tensor2rgb(im3))
+            inputs_list.append(utility.tensor2rgb(im5))
 
-                imwrite(
-                    out,
-                    join(output_dir, seq, "frame{}.png".format(t + 3)),
-                    range=(0, 1),
-                )
+            for metric in metrics:
+                if metric in ["PSNR", "SSIM"]:
+                    score = getattr(utility, "calc_{}".format(metric.lower()))(
+                        im4, out
+                    )[0].item()
+                    tmp_dict[metric].append(score)
+
+            imwrite(
+                out,
+                join(output_dir, seq, "frame{}.png".format(t + 3)),
+                range=(0, 1),
+            )
 
             # compute sequence-level scores
             for metric in metrics:
@@ -335,6 +347,10 @@ class Davis90_quintuplet:
                 "{:<15s} -- {}".format(
                     seq, {k: round(results_dict[k][-1], 3) for k in metrics}
                 )
+                + "\t"
+                + "Average time: {}".format(
+                    np.sum(results_dict["Times"]) / np.sum(results_dict["Frames"])
+                )
                 + "\n"
             )
             print(msg, end="")
@@ -345,6 +361,8 @@ class Davis90_quintuplet:
                 "Average", {k: round(np.mean(results_dict[k]), 3) for k in metrics}
             )
             + "\n"
+            + "Average average time: {}".format(np.mean(results_dict["Times"]))
+            + "\n\n"
         )
         print(msg, end="")
         logfile.write(msg)
